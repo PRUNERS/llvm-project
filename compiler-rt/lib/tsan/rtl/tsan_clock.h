@@ -138,7 +138,11 @@ class ThreadClock {
   void acq_rel(ClockCache *c, SyncClock *dst);
   void ReleaseStore(ClockCache *c, SyncClock *dst);
   void ResetCached(ClockCache *c);
-
+  
+#if !defined(TSAN_NO_LOCAL_CONCURRENCY)
+  void AcquireStore(ClockCache *c, SyncClock *src);
+#endif
+  
   void DebugReset();
   void DebugDump(int(*printf)(const char *s, ...));
 
