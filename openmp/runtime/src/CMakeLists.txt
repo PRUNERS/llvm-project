@@ -269,7 +269,6 @@ endif()
 # which be examined as needed.
 libomp_get_cflags(OMPD_SYMBOLS_CFLAGS)
 get_property(ompd_symbols_inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
-message("OMPD_SYMBOLS_INC_DIRS == ${ompd_symbols_inc_dirs}")
 foreach(d ${ompd_symbols_inc_dirs})
   set(OMPD_SYMBOLS_CFLAGS "${OMPD_SYMBOLS_CFLAGS} -I${d}")
 endforeach()
