@@ -113,6 +113,9 @@ static int32_t nvptx_parallel_reduce_nowait(
    * 3. Warp 0 reduces to a single value.
    * 4. The reduced value is available in the thread that returns 1.
    */
+#ifdef OMPD_SUPPORT
+    ompd_set_device_thread_state(omp_state_work_reduction);
+#endif /*OMPD_SUPPORT*/
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
   uint32_t WarpsNeeded = (NumThreads + WARPSIZE - 1) / WARPSIZE;
@@ -141,7 +144,15 @@ static int32_t nvptx_parallel_reduce_nowait(
     if (WarpId == 0)
       gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
                                 BlockThreadId);
+#ifdef OMPD_SUPPORT
+  ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
   }
+
+#ifdef OMPD_SUPPORT
+  ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
+
   return BlockThreadId == 0;
 #else
   uint32_t Liveness = __ACTIVEMASK();
@@ -175,6 +186,10 @@ static int32_t nvptx_parallel_reduce_nowait(
   } else if (isRuntimeUninitialized /* Never an L2 parallel region without the OMP runtime */) {
     return BlockThreadId == 0;
   }
+
+#ifdef OMPD_SUPPORT
+    ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
 
   // Get the OMP thread Id. This is different from BlockThreadId in the case of
   // an L2 parallel region.
@@ -230,6 +245,9 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
   // reduction because the workers are waiting for parallel work.
+#ifdef OMPD_SUPPORT
+    ompd_set_device_thread_state(omp_state_work_reduction);
+#endif /*OMPD_SUPPORT*/
   uint32_t NumThreads =
       isSPMDExecutionMode ? GetNumberOfOmpThreads(/*isSPMDExecutionMode=*/true)
                           : /*Master thread only*/ 1;
@@ -342,6 +360,9 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
   }
 #endif // __CUDA_ARCH__ >= 700
 
+#ifdef OMPD_SUPPORT
+    ompd_reset_device_thread_state();
+#endif /*OMPD_SUPPORT*/
   return ThreadId == 0;
 }
 

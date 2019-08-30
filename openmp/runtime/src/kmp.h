@@ -136,6 +136,10 @@ typedef unsigned int kmp_hwloc_depth_t;
 #include "ompt-internal.h"
 #endif
 
+#if OMPD_SUPPORT
+#include "ompd-specific.h"
+#endif
+
 // Affinity format function
 #include "kmp_str.h"
 

@@ -33,6 +33,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#ifdef OMPD_SUPPORT
+  #include "ompd-specific.h"
+#endif /*OMPD_SUPPORT*/
 
 typedef struct ConvergentSimdJob {
   omptarget_nvptx_TaskDescr taskDescr;
@@ -262,6 +265,20 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "only team master can create parallel");
 
+#ifdef OMPD_SUPPORT
+  // Set ompd info for first level parallel region (this info is stored in the
+  // master threads task info, so it can easily be accessed
+  ompd_nvptx_parallel_info_t &nextPar = currTaskDescr->ompd_ThreadInfo()
+                                                     ->enclosed_parallel;
+  nextPar.level = 1;
+  nextPar.parallel_tasks =
+      omptarget_nvptx_threadPrivateContext->Level1TaskDescr(0);
+  // Move the previous thread into undefined state (will be reset in __kmpc_kernel_end_parallel)
+  // TODO (mr) find a better place to do this
+  ompd_set_device_thread_state(omp_state_undefined);
+  ompd_bp_parallel_begin();
+#endif /*OMPD_SUPPORT*/
+
   // Set number of threads on work descriptor.
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
   workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr);
@@ -312,6 +329,10 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
 
     isActive = true;
     IncParallelLevel(threadsInTeam != 1);
+#ifdef OMPD_SUPPORT
+    ompd_init_thread_parallel();
+    ompd_bp_thread_begin();
+#endif /*OMPD_SUPPORT*/
   }
 
   return isActive;
@@ -330,6 +351,13 @@ EXTERN void __kmpc_kernel_end_parallel() {
       threadId, currTaskDescr->GetPrevTaskDescr());
 
   DecParallelLevel(threadsInTeam != 1);
+#ifdef OMPD_SUPPORT
+  ompd_reset_device_thread_state();
+  ompd_bp_thread_end();
+  if (threadId == 0) {
+    ompd_bp_parallel_end();
+  }
+#endif /*OMPD_SUPPORT*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -369,9 +397,26 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   // - there is only one thread per team
   newTaskDescr->ThreadId() = 0;
 
+#ifdef OMPD_SUPPORT
+  // Set ompd parallel info for the next parallel region in the previous task
+  // descriptor
+  ompd_nvptx_parallel_info_t &newPar =
+      currTaskDescr->ompd_ThreadInfo()->enclosed_parallel;
+  newPar.level = currTaskDescr->GetPrevTaskDescr()
+                              ->ompd_ThreadInfo()
+                              ->enclosed_parallel
+                              .level + 1;
+  newPar.parallel_tasks = newTaskDescr;
+#endif
+
   // set new task descriptor as top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
                                                              newTaskDescr);
+#ifdef OMPD_SUPPORT
+  ompd_init_thread_parallel(); // we are still in a prallel region
+  // every thread is a parallel region.. hooray
+  ompd_bp_parallel_begin();
+#endif /*OMPD_SUPPORT*/
 }
 
 EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
@@ -392,6 +437,9 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   // set new top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
+#ifdef OMPD_SUPPORT
+  ompd_bp_parallel_end();
+#endif
   // free
   SafeFree(currTaskDescr, (char *)"new seq parallel task");
   currTaskDescr = getMyTopTaskDescriptor(threadId);
