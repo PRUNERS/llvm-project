@@ -1,4 +1,3 @@
-project (libompd)
 add_library (ompd SHARED TargetValue.cpp omp-debug.cpp omp-state.cpp omp-icv.cpp)
 
 add_dependencies(ompd omp) # ensure generated import library is created first
@@ -14,6 +13,4 @@ INSTALL( TARGETS ompd
         LIBRARY DESTINATION lib 
         ARCHIVE DESTINATION lib/static 
         RUNTIME DESTINATION bin )
-
-INSTALL(FILES ompd.h DESTINATION include)
 
