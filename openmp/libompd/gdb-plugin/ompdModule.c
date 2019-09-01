@@ -697,7 +697,6 @@ static PyObject* get_thread_handle(PyObject* self, PyObject* args)
 	uint64_t threadId = (uint64_t) PyLong_AsLong(threadIdTup);
 	// NOTE: compiler does not know what thread handle looks like, so no memory 
 	// is allocated automatically in the debugger's memory space
-	char dummyBuffer[40];
 	
 	PyObject* addrSpaceTup = PyTuple_GetItem(args, 1);
 	ompd_thread_handle_t* threadHandle;
@@ -706,7 +705,6 @@ static PyObject* get_thread_handle(PyObject* self, PyObject* args)
 	ompd_size_t sizeof_tid = (ompd_size_t) sizeof(uint64_t);
 	ompd_rc_t retVal = ompd_get_thread_handle(addrSpace, 1, sizeof_tid, &threadId, &threadHandle);
 	
-	free(dummyBuffer);
 	if(retVal == ompd_rc_unavailable) {
 		return Py_BuildValue("i", -1);
 	} else if(retVal != ompd_rc_ok) {
