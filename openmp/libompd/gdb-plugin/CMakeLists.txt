@@ -17,7 +17,7 @@ add_custom_command(
 )
 add_custom_target(ompd_c_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/python-module/timestamp)
 
-install(CODE "execute_process(COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/setup.py install --user)")
+install(CODE "execute_process(COMMAND env C_INCLUDE_PATH=${LIBOMP_INCLUDE_DIR} python ${CMAKE_CURRENT_SOURCE_DIR}/setup.py install --user)")
 list(APPEND PYTHONPATH "${CMAKE_CURRENT_BINARY_DIR}/python-module")
 
 configure_file(__init__.py.in __init__.py @ONLY)
