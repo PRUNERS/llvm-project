@@ -1,4 +1,6 @@
 if(LIBOMP_OMPD_SUPPORT)
+    cmake_minimum_required(VERSION 3.4.3)
+    project(ompd)
     set(OMPD_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/)
     add_subdirectory(gdb-plugin)
     add_subdirectory(test)
